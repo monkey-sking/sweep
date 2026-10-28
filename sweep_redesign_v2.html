@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sweep · AI 工具磁盘清理</title>
+<style>
+:root{
+  --bg:#0d1117; --surface:#161b22; --surface-2:#1c2128; --surface-3:#232a33;
+  --border:#30363d; --text:#e6edf3; --text-2:#adbac7; --text-3:#768390;
+  --accent:#3fb950; --amber:#d29922; --red:#f85149;
+  --accent-weak:rgba(63,185,80,.12); --amber-weak:rgba(210,153,34,.12); --red-weak:rgba(248,81,73,.12);
+  --r-sm:8px; --r:10px; --r-lg:14px; --r-xl:18px; --r-pill:999px;
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px;
+  --fs-xs:11px; --fs-sm:12px; --fs-md:13px; --fs-base:14px; --fs-lg:16px; --fs-xl:20px; --fs-2xl:28px; --fs-3xl:34px;
+  --sh:0 8px 24px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;font-size:var(--fs-base);line-height:1.5}
+.app{display:grid;grid-template-columns:240px 1fr;grid-template-rows:auto 1fr;height:100vh;overflow:hidden}
+/* sidebar */
+.sidebar{grid-column:1;grid-row:1 / -1;background:var(--surface);border-right:1px solid var(--border);padding:var(--s5) var(--s4);display:flex;flex-direction:column;gap:var(--s2);overflow:auto}
+.brand{display:flex;align-items:center;gap:var(--s2);padding:0 var(--s2) var(--s4);border-bottom:1px solid var(--border);margin-bottom:var(--s2)}
+.brand .dot{width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px var(--accent)}
+.brand b{font-size:var(--fs-lg)}
+.brand span{color:var(--text-3);font-size:var(--fs-xs)}
+.nav-item{display:flex;align-items:center;gap:var(--s3);padding:var(--s3);border-radius:var(--r);color:var(--text-2);cursor:pointer;border:1px solid transparent;transition:.15s}
+.nav-item:hover{background:var(--surface-2);color:var(--text)}
+.nav-item.active{background:var(--accent-weak);color:var(--text);border-color:rgba(63,185,80,.3)}
+.nav-item .ic{width:8px;height:8px;border-radius:2px;background:var(--text-3)}
+.nav-item.active .ic{background:var(--accent)}
+.nav-item .sub{margin-left:auto;font-size:var(--fs-xs);color:var(--text-3)}
+.nav-divider{height:1px;background:var(--border);margin:var(--s2) 0}
+/* status bar */
+.statusbar{grid-column:2;grid-row:1;display:flex;align-items:center;gap:var(--s5);padding:var(--s3) var(--s6);background:var(--surface);border-bottom:1px solid var(--border);font-size:var(--fs-sm)}
+.statusbar .sb-item{display:flex;align-items:baseline;gap:var(--s2)}
+.statusbar .sb-ic{font-size:18px;line-height:1}
+.statusbar .sb-num{font-size:var(--fs-lg);font-weight:700}
+.statusbar .sb-lbl{color:var(--text-3);font-size:var(--fs-xs)}
+.statusbar .g{color:var(--accent)} .statusbar .a{color:var(--amber)} .statusbar .r{color:var(--red)}
+.statusbar .spacer{flex:1}
+.statusbar .scan-time{color:var(--text-3);font-size:var(--fs-xs)}
+/* main */
+.main{grid-column:2;grid-row:2;padding:var(--s6);overflow:auto}
+.content{max-width:1080px;margin:0 auto}
+.section{display:none;animation:fade .2s ease}
+.section.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.section-head{margin-bottom:var(--s5)}
+.section-head h1{font-size:var(--fs-2xl);font-weight:700}
+.section-head p{color:var(--text-3);font-size:var(--fs-md);margin-top:var(--s2)}
+/* hero */
+.hero{background:linear-gradient(135deg,var(--surface-2),var(--surface));border:1px solid var(--border);border-radius:var(--r-xl);padding:var(--s6);margin-bottom:var(--s5);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--s5);box-shadow:var(--sh)}
+.hero .h-num{font-size:var(--fs-3xl);font-weight:800;color:var(--accent);line-height:1}
+.hero .h-lbl{color:var(--text-2);font-size:var(--fs-md);margin-top:var(--s2)}
+.hero .h-sub{color:var(--text-3);font-size:var(--fs-xs);margin-top:var(--s2)}
+.hero .h-cta{display:flex;flex-direction:column;gap:var(--s3);align-items:flex-end}
+/* donut */
+.viz{display:flex;gap:var(--s6);align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--s5);margin-bottom:var(--s5);flex-wrap:wrap}
+.donut{width:160px;height:160px;flex:none;position:relative}
+.donut-svg{display:block}
+.donut .seg{cursor:pointer;transition:stroke-width .15s}
+.donut .seg:hover{stroke-width:32}
+.donut .center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:1}
+.donut .center b{font-size:var(--fs-xl);font-weight:800}
+.donut .center span{font-size:var(--fs-xs);color:var(--text-3)}
+.legend{display:flex;flex-direction:column;gap:var(--s3);flex:1;min-width:220px}
+.legend .lg{display:flex;align-items:center;gap:var(--s3)}
+.legend .sw{width:12px;height:12px;border-radius:3px;flex:none}
+.legend .lg .nm{color:var(--text-2)}
+.legend .lg .vl{margin-left:auto;font-weight:700}
+.legend .lg .ds{color:var(--text-3);font-size:var(--fs-xs)}
+.legend .lg.clickable{cursor:pointer;padding:4px 6px;margin:-4px -6px;border-radius:var(--r-sm);transition:.15s}
+.legend .lg.clickable:hover{background:var(--surface-2)}
+.donut-key{flex-basis:100%;font-size:var(--fs-xs);color:var(--text-3);margin-top:var(--s2);line-height:1.7}
+/* module cards */
+.modules{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--s4);margin-bottom:var(--s5)}
+.module-card{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--border);border-radius:var(--r-lg);padding:var(--s4);cursor:pointer;transition:.15s}
+.module-card:hover{border-color:var(--text-3);transform:translateY(-2px)}
+.module-card.g{border-left-color:var(--accent)} .module-card.a{border-left-color:var(--amber)} .module-card.r{border-left-color:var(--red)}
+.module-card h3{font-size:var(--fs-lg);margin-bottom:var(--s2)}
+.module-card .mc-sub{color:var(--text-3);font-size:var(--fs-xs);margin-bottom:var(--s3)}
+.module-card .mc-stat{display:flex;gap:var(--s4);font-size:var(--fs-sm)}
+.module-card .mc-stat .pill{font-size:var(--fs-xs)}
+/* pills */
+.pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:var(--r-pill);font-size:var(--fs-xs);font-weight:600}
+.pill.g{background:var(--accent-weak);color:var(--accent)}
+.pill.a{background:var(--amber-weak);color:var(--amber)}
+.pill.r{background:var(--red-weak);color:var(--red)}
+.pill.ghost{background:var(--surface-3);color:var(--text-2)}
+/* btn */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--s2);padding:var(--s3) var(--s4);border-radius:var(--r);border:1px solid var(--border);background:var(--surface-2);color:var(--text);font-size:var(--fs-base);font-weight:600;cursor:pointer;transition:.15s;font-family:inherit}
+.btn:hover{background:var(--surface-3)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#08130c}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{background:var(--red);border-color:var(--red);color:#1a0606}
+.btn.ghost{background:transparent}
+.btn.sm{padding:var(--s2) var(--s3);font-size:var(--fs-sm)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+/* risk groups */
+.risk-group{margin-bottom:var(--s5);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden}
+.risk-group > .rg-head{display:flex;align-items:center;gap:var(--s3);padding:var(--s3) var(--s4);background:var(--surface-2);font-weight:700;font-size:var(--fs-md)}
+.risk-group.g > .rg-head{color:var(--accent)} .risk-group.a > .rg-head{color:var(--amber)} .risk-group.r > .rg-head{color:var(--red)}
+.risk-group .rg-head .cnt{margin-left:auto;color:var(--text-3);font-weight:400;font-size:var(--fs-sm)}
+/* 逐个工具清理 */
+.tool-block{border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;background:var(--surface)}
+.tool-block + .tool-block{margin-top:var(--s4)}
+.tool-head{display:flex;align-items:center;gap:var(--s3);padding:var(--s3) var(--s4);background:var(--surface-2)}
+.tb-ic{width:30px;height:30px;flex:none;border-radius:var(--r-md);background:var(--accent);color:#06210d;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center}
+.tb-name{font-weight:700;font-size:var(--fs-md)}
+.tb-name .tb-sub{font-weight:400;color:var(--text-3);font-size:var(--fs-sm);margin-left:var(--s2)}
+.tb-stat{margin-left:auto;color:var(--text-3);font-size:var(--fs-sm)}
+.tb-stat b{color:var(--accent)}
+.tb-all{display:flex;align-items:center;gap:var(--s1);font-size:var(--fs-sm);color:var(--text-3);cursor:pointer}
+.tb-all input{width:15px;height:15px;cursor:pointer}
+.tool-block .row{border-bottom:1px solid var(--border)}
+.tool-block .row:last-child{border-bottom:0}
+/* 类型标签：只用文字，不靠颜色命名 */
+.tag{font-size:var(--fs-xs);font-weight:600;padding:2px 8px;border-radius:99px;white-space:nowrap;flex:none}
+.tag.g{background:rgba(63,185,80,.16);color:var(--accent)}
+.tag.a{background:var(--amber-bg);color:var(--amber)}
+.tag.r{background:rgba(240,88,77,.16);color:var(--red)}
+.tt{font-weight:600;color:var(--text-2);min-width:64px;flex:none;font-size:var(--fs-sm)}
+.row{display:flex;align-items:center;gap:var(--s3);padding:var(--s3) var(--s4);border-top:1px solid var(--border);background:var(--surface)}
+.row:hover{background:var(--surface-2)}
+.row .ck{width:16px;height:16px;flex:none;accent-color:var(--accent)}
+.row .meta{flex:1;min-width:0}
+.row .meta .pth{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:var(--fs-sm);color:var(--text);word-break:break-all}
+.row .meta .tool{color:var(--text-3);font-size:var(--fs-xs);margin-top:2px}
+.row .sz{font-weight:700;font-size:var(--fs-sm);white-space:nowrap}
+.row .rsn{color:var(--text-3);font-size:var(--fs-xs);margin-top:2px}
+.row .acts{display:flex;gap:var(--s2);flex:none}
+/* field / toolbar */
+.toolbar{display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap;padding:var(--s4);background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:var(--s4)}
+.field{display:flex;align-items:center;gap:var(--s2);font-size:var(--fs-sm);color:var(--text-2)}
+.field select{background:var(--surface-3);color:var(--text);border:1px solid var(--border);border-radius:var(--r-sm);padding:6px 8px;font-family:inherit;font-size:var(--fs-sm)}
+.dryrun{margin-left:auto;font-size:var(--fs-sm);color:var(--text-2)}
+.dryrun b{color:var(--accent)}
+.note{background:var(--surface-2);border:1px solid var(--border);border-left:3px solid var(--amber);border-radius:var(--r-sm);padding:var(--s3) var(--s4);font-size:var(--fs-sm);color:var(--text-2);margin-bottom:var(--s4)}
+.note code{font-family:ui-monospace,Menlo,monospace;background:var(--surface-3);padding:1px 5px;border-radius:4px;color:var(--text)}
+.empty{padding:var(--s7);text-align:center;color:var(--text-3);font-size:var(--fs-md)}
+.empty .big{font-size:var(--fs-xl);color:var(--accent);margin-bottom:var(--s2)}
+.divider{height:1px;background:var(--border);margin:var(--s5) 0}
+h2.sub{font-size:var(--fs-lg);margin:var(--s5) 0 var(--s3);font-weight:700}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- sidebar -->
+  <aside class="sidebar">
+    <div class="brand"><span class="dot"></span><div><b>Sweep</b><br><span>AI 磁盘资产管理</span></div></div>
+    <div class="nav-item active" onclick="go('overview')"><span class="ic"></span>总览<span class="sub">主页</span></div>
+    <div class="nav-item" onclick="go('conv')"><span class="ic"></span>逐个工具清理<span class="sub">8 个工具</span></div>
+    <div class="nav-item" onclick="go('dup')"><span class="ic"></span>重复检测<span class="sub">9 组</span></div>
+    <div class="nav-item" onclick="go('trash')"><span class="ic"></span>回收站<span class="sub">12 项</span></div>
+    <div class="nav-item" onclick="go('uninstall')"><span class="ic"></span>卸载工具<span class="sub">5 个</span></div>
+    <div class="nav-divider"></div>
+    <div class="nav-item" onclick="go('protect')"><span class="ic"></span>保护列表<span class="sub">3 条</span></div>
+    <div class="nav-item" onclick="go('audit')"><span class="ic"></span>审计日志<span class="sub">记录</span></div>
+  </aside>
+
+  <!-- status bar -->
+  <div class="statusbar">
+    <div class="sb-item"><span class="sb-ic">✅</span><span class="sb-num g">4.0 GB</span><span class="sb-lbl">能安全删</span></div>
+    <div class="sb-item"><span class="sb-ic">⏳</span><span class="sb-num a">11.4 GB</span><span class="sb-lbl">先别删</span></div>
+    <div class="sb-item"><span class="sb-ic">🔒</span><span class="sb-num r">3.3 GB</span><span class="sb-lbl">已锁定</span></div>
+    <div class="spacer"></div>
+    <div class="scan-time">扫描于 2 分钟前 · 55 个目录 / 18.7 GB</div>
+  </div>
+
+  <!-- main -->
+  <main class="main">
+    <div class="content">
+
+      <!-- ===== 总览主页 ===== -->
+      <section class="section active" id="overview">
+        <div class="section-head"><h1>总览</h1><p>一眼看清 AI 工具占用了什么，以及能放心拿回多少。</p></div>
+
+        <div class="hero">
+          <div>
+            <div class="h-num">4.0 GB</div>
+            <div class="h-lbl">能安全清理（删了不心疼）</div>
+            <div class="h-sub">先别删的 11.4 GB · 锁住的 3.3 GB · 共 18.7 GB</div>
+          </div>
+          <div class="h-cta">
+            <button class="btn primary" onclick="go('conv')">清理 4.0 GB →</button>
+            <button class="btn ghost sm" onclick="copyReport()">复制占用概览</button>
+            <span class="h-sub">只删能安全删的，其余不动</span>
+          </div>
+        </div>
+
+        <div class="viz">
+          <div class="donut">
+            <svg viewBox="0 0 160 160" width="160" height="160" class="donut-svg" role="img" aria-label="占用分布：能安全删4GB、先别删11.4GB、已锁定3.3GB">
+              <circle class="seg" cx="80" cy="80" r="64" fill="none" stroke="var(--accent)" stroke-width="28" stroke-dasharray="86.054 402.124" stroke-dashoffset="0" transform="rotate(-90 80 80)" onclick="tierClick('green')"></circle>
+              <circle class="seg" cx="80" cy="80" r="64" fill="none" stroke="var(--amber)" stroke-width="28" stroke-dasharray="245.296 402.124" stroke-dashoffset="-86.054" transform="rotate(-90 80 80)" onclick="tierClick('amber')"></circle>
+              <circle class="seg" cx="80" cy="80" r="64" fill="none" stroke="var(--red)" stroke-width="28" stroke-dasharray="70.774 402.124" stroke-dashoffset="-331.35" transform="rotate(-90 80 80)" onclick="tierClick('red')"></circle>
+            </svg>
+            <div class="center"><b>18.7</b><span>GB 总占用</span></div>
+          </div>
+          <div class="legend">
+            <div class="lg clickable" onclick="tierClick('green')"><span class="sw" style="background:var(--accent)"></span><div class="nm">能安全删<div class="ds">缓存 / 临时 / 可重建</div></div><span class="vl g">4.0 GB</span></div>
+            <div class="lg clickable" onclick="tierClick('amber')"><span class="sw" style="background:var(--amber)"></span><div class="nm">先别删<div class="ds">近期还在用，想腾空间可挑更早的</div></div><span class="vl a">11.4 GB</span></div>
+            <div class="lg clickable" onclick="tierClick('red')"><span class="sw" style="background:var(--red)"></span><div class="nm">已锁定<div class="ds">项目文件 / 进程占用，不碰</div></div><span class="vl r">3.3 GB</span></div>
+          </div>
+          <div class="donut-key">点任一段或右侧条目，看对应的内容。</div>
+        </div>
+
+        <div class="modules">
+          <div class="module-card g" onclick="go('conv')"><h3>逐个工具清理</h3><div class="mc-sub">按工具看清每类能删什么</div><div class="mc-stat"><span class="pill g">能删 18</span><span class="pill a">先留 6</span><span class="pill r">锁定 2</span></div></div>
+          <div class="module-card a" onclick="go('dup')"><h3>重复检测</h3><div class="mc-sub">跨工具去重（不删文件）</div><div class="mc-stat"><span class="pill a">9 组</span><span class="pill g">可省 2.1 GB</span></div></div>
+          <div class="module-card g" onclick="go('trash')"><h3>回收站</h3><div class="mc-sub">误删兜底，可一键还原</div><div class="mc-stat"><span class="pill g">12 项</span><span class="pill ghost">1.8 GB</span></div></div>
+          <div class="module-card r" onclick="go('uninstall')"><h3>卸载工具</h3><div class="mc-sub">一键卸载 AI 编码工具</div><div class="mc-stat"><span class="pill r">5 个</span><span class="pill ghost">4.7 GB</span></div></div>
+        </div>
+
+        <div class="note">清理的东西先放进回收站，误删了随时能还原。想腾更多空间，进「逐个工具清理」按工具看清对话记录 / 缓存 / 临时文件 / 日志，挑能删的勾上。</div>
+      </section>
+
+      <!-- ===== 逐个工具清理 ===== -->
+      <section class="section" id="conv">
+        <div class="section-head"><h1>逐个工具清理</h1><p>每个 AI 工具有好几类能清的东西——对话记录、缓存、临时文件、日志。按工具看清每类能删什么，勾选要清的，锁住的不动。</p></div>
+
+        <div class="toolbar">
+          <div class="field">保留期
+            <select id="retain" onchange="applyRetain()">
+              <option value="all">全部（含近 7 天）</option>
+              <option value="30">保留近 30 天</option>
+              <option value="7" selected>保留近 7 天（推荐）</option>
+              <option value="0">只清更早的</option>
+            </select>
+          </div>
+          <div class="dryrun">将清理 <b id="drN">0</b> 项 / 释放 <b id="drG">0.0</b> GB</div>
+          <button class="btn primary sm" id="convClean" disabled onclick="alert('dry-run 预览后执行清理')">确认清理</button>
+        </div>
+
+        <!-- Claude -->
+        <div class="tool-block">
+          <div class="tool-head"><span class="tb-ic">C</span><div class="tb-name">Claude<span class="tb-sub">Anthropic</span></div><div class="tb-stat">本工具可清理 <b>1.3 GB</b></div><label class="tb-all"><input type="checkbox" onchange="toggleTool(this)"> 全选</label></div>
+          <div class="rows">
+            <div class="row"><input type="checkbox" class="ck" data-gb="0.3" onchange="calcDry()"><div class="meta"><div class="pth">~/.claude/projects/*.jsonl</div><div class="tool">对话记录 · 历史会话，可重建</div></div><span class="tag g">能安全删</span><div class="sz">0.3 GB</div></div>
+            <div class="row"><input type="checkbox" class="ck" data-gb="0.9" onchange="calcDry()"><div class="meta"><div class="pth">~/AppData/Local/Claude-3p</div><div class="tool">缓存 · 模型与响应缓存</div></div><span class="tag g">能安全删</span><div class="sz">0.9 GB</div></div>
+            <div class="row"><input type="checkbox" class="ck" data-gb="0.05" onchange="calcDry()"><div class="meta"><div class="pth">~/.claude/tmp/</div><div class="tool">临时文件 · 构建 / 下载临时物</div></div><span class="tag g">能安全删</span><div class="sz">0.05 GB</div></div>
+            <div class="row"><input type="checkbox" class="ck" data-gb="0.02" onchange="calcDry()"><div class="meta"><div class="pth">~/AppData/Roaming/Claude/logs/</div><div class="tool">日志 · 运行日志</div></div><span class="tag g">能安全删</span><div class="sz">0.02 GB</div></div>
+            <div class="row"><div class="meta"><div class="pth">~/.claude/settings.json + 项目上下文</div><div class="tool">近 7 天活跃</div><div class="rsn">理由：3 天内有读写，清理会丢失当前项目进度。</div></div><span class="tag a">先别删</span><div class="sz">6.2 GB</div><div class="acts"><button class="btn sm" onclick="this.innerText='已排期'">保留期后清</button></div></div>
+            <div class="row"><div class="meta"><div class="pth">~/.claude/running/</div><div class="tool">运行中会话 · 进程占用</div><div class="rsn">受保护理由：进程占用中（PID 93821），强制清理会崩溃当前会话。</div></div><span class="tag r">已锁定</span><div class="sz">0.9 GB</div><div class="acts"><button class="btn sm" disabled>受保护</button></div></div>
+          </div>
+        </div>
+
+        <!-- Codex -->
+        <div class="tool-block">
+          <div class="tool-head"><span class="tb-ic">X</span><div class="tb-name">Codex<span class="tb-sub">OpenAI</span></div><div class="tb-stat">本工具可清理 <b>1.3 GB</b></div><label class="tb-all"><input type="checkbox" onchange="toggleTool(this)"> 全选</label></div>
+          <div class="rows">
+            <div class="row"><input type="checkbox" class="ck" data-gb="0.8" onchange="calcDry()"><div class="meta"><div class="pth">~/.codex/sessions/</div><div class="tool">对话记录 · 历史会话</div></div><span class="tag g">能安全删</span><div class="sz">0.8 GB</div></div>
+            <div class="row"><input type="checkbox" class="ck" data-gb="0.2" onchange="calcDry()"><div class="meta"><div class="pth">~/AppData/Local/OpenAI</div><div class="tool">缓存 · 响应与索引缓存</div></div><span class="tag g">能安全删</span><div class="sz">0.2 GB</div></div>
+            <div class="row"><input type="checkbox" class="ck" data-gb="0.3" onchange="calcDry()"><div class="meta"><div class="pth">~/.codex-temp/</div><div class="tool">临时文件 · 调试临时物</div></div><span class="tag g">能安全删</span><div class="sz">0.3 GB</div></div>
+            <div class="row"><div class="meta"><div class="pth">~/.codex/projects/aura-night-debug/</div><div class="tool">当前分支调试产物</div><div class="rsn">理由：属 codex/aura-night-debug 分支，7 天内活跃。</div></div><span class="tag a">先别删</span><div class="sz">3.4 GB</div><div class="acts"><button class="btn sm" onclick="this.innerText='已排期'">保留期后清</button></div></div>
+          </div>
+        </div>
+
+        <!-- Gemini -->
+        <div class="tool-block">
+          <div class="tool-head"><span class="tb-ic">G</span><div class="tb-name">Gemini<span class="tb-sub">Google</span></div><div class="tb-stat">本工具可清理 <b>0.7 GB</b></div><label class="tb-all"><input type="checkbox" onchange="toggleTool(this)"> 全选</label></div>
+          <div class="rows">
+            <div class="row"><input type="checkbox" class="ck" data-gb="0.2" onchange="calcDry()"><div class="meta"><div class="pth">~/.gemini/sessions/</div><div class="tool">对话记录 · 历史会话</div></div><span class="tag g">能安全删</span><div class="sz">0.2 GB</div></div>
+            <div class="row"><input type="checkbox" class="ck" data-gb="0.5" onchange="calcDry()"><div class="meta"><div class="pth">~/.gemini/cache/</div><div class="tool">缓存 · 模型与响应缓存</div></div><span class="tag g">能安全删</span><div class="sz">0.5 GB</div></div>
+            <div class="row"><div class="meta"><div class="pth">~/.gemini/tuned-models/</div><div class="tool">微调产物</div><div class="rsn">理由：重建成本高（微调耗时），建议先别删。</div></div><span class="tag a">先别删</span><div class="sz">1.8 GB</div><div class="acts"><button class="btn sm" onclick="this.innerText='已排期'">保留期后清</button></div></div>
+          </div>
+        </div>
+
+        <!-- Cursor -->
+        <div class="tool-block">
+          <div class="tool-head"><span class="tb-ic">Cu</span><div class="tb-name">Cursor<span class="tb-sub">字节跳动</span></div><div class="tb-stat">本工具可清理 <b>0.1 GB</b></div><label class="tb-all"><input type="checkbox" onchange="toggleTool(this)"> 全选</label></div>
+          <div class="rows">
+            <div class="row"><input type="checkbox" class="ck" data-gb="0.04" onchange="calcDry()"><div class="meta"><div class="pth">~/AppData/Local/com.cursor-agent.app</div><div class="tool">缓存 · 索引缓存</div></div><span class="tag g">能安全删</span><div class="sz">0.04 GB</div></div>
+            <div class="row"><input type="checkbox" class="ck" data-gb="0.02" onchange="calcDry()"><div class="meta"><div class="pth">~/.cursor/tmp/</div><div class="tool">临时文件</div></div><span class="tag g">能安全删</span><div class="sz">0.02 GB</div></div>
+            <div class="row"><input type="checkbox" class="ck" data-gb="0.01" onchange="calcDry()"><div class="meta"><div class="pth">~/AppData/Roaming/Cursor/logs/</div><div class="tool">日志</div></div><span class="tag g">能安全删</span><div class="sz">0.01 GB</div></div>
+          </div>
+        </div>
+
+        <!-- Zed -->
+        <div class="tool-block">
+          <div class="tool-head"><span class="tb-ic">Z</span><div class="tb-name">Zed<span class="tb-sub">AI 编辑器</span></div><div class="tb-stat">本工具可清理 <b>1.1 GB</b></div><label class="tb-all"><input type="checkbox" onchange="toggleTool(this)"> 全选</label></div>
+          <div class="rows">
+            <div class="row"><input type="checkbox" class="ck" data-gb="1.1" onchange="calcDry()"><div class="meta"><div class="pth">~/AppData/Local/Zed/cache/remote/</div><div class="tool">缓存 · 远程索引缓存</div></div><span class="tag g">能安全删</span><div class="sz">1.1 GB</div></div>
+          </div>
+        </div>
+
+        <!-- Antigravity -->
+        <div class="tool-block">
+          <div class="tool-head"><span class="tb-ic">A</span><div class="tb-name">Antigravity<span class="tb-sub">Google AI IDE</span></div><div class="tb-stat">本工具可清理 <b>3.9 GB</b></div><label class="tb-all"><input type="checkbox" onchange="toggleTool(this)"> 全选</label></div>
+          <div class="rows">
+            <div class="row"><input type="checkbox" class="ck" data-gb="3.5" onchange="calcDry()"><div class="meta"><div class="pth">~/.antigravity_cockpit</div><div class="tool">缓存 · 大体积运行缓存</div></div><span class="tag g">能安全删</span><div class="sz">3.5 GB</div></div>
+            <div class="row"><input type="checkbox" class="ck" data-gb="0.4" onchange="calcDry()"><div class="meta"><div class="pth">~/.antigravity/tmp/</div><div class="tool">临时文件</div></div><span class="tag g">能安全删</span><div class="sz">0.4 GB</div></div>
+          </div>
+        </div>
+
+        <!-- QClaw -->
+        <div class="tool-block">
+          <div class="tool-head"><span class="tb-ic">Q</span><div class="tb-name">QClaw<span class="tb-sub">AI 编码助手</span></div><div class="tb-stat">本工具可清理 <b>2.9 GB</b></div><label class="tb-all"><input type="checkbox" onchange="toggleTool(this)"> 全选</label></div>
+          <div class="rows">
+            <div class="row"><input type="checkbox" class="ck" data-gb="2.9" onchange="calcDry()"><div class="meta"><div class="pth">~/.qclaw · ~/.qclaw-backups · ~/AppData/Roaming/QClaw</div><div class="tool">缓存 · 索引与历史缓存</div></div><span class="tag g">能安全删</span><div class="sz">2.9 GB</div></div>
+          </div>
+        </div>
+
+        <!-- 通用包缓存 -->
+        <div class="tool-block">
+          <div class="tool-head"><span class="tb-ic">⚙</span><div class="tb-name">通用包缓存<span class="tb-sub">各工具共用</span></div><div class="tb-stat">可清理 <b>0.2 GB</b></div><label class="tb-all"><input type="checkbox" onchange="toggleTool(this)"> 全选</label></div>
+          <div class="rows">
+            <div class="row"><input type="checkbox" class="ck" data-gb="0.04" onchange="calcDry()"><div class="meta"><div class="pth">~/AppData/Local/pip/Cache</div><div class="tool">pip 缓存</div></div><span class="tag g">能安全删</span><div class="sz">0.04 GB</div></div>
+            <div class="row"><input type="checkbox" class="ck" data-gb="0.1" onchange="calcDry()"><div class="meta"><div class="pth">~/.npm/_cacache</div><div class="tool">npm 缓存</div></div><span class="tag g">能安全删</span><div class="sz">0.1 GB</div></div>
+            <div class="row"><input type="checkbox" class="ck" data-gb="0.0" onchange="calcDry()"><div class="meta"><div class="pth">~/.cache/huggingface</div><div class="tool">HuggingFace 缓存</div></div><span class="tag g">能安全删</span><div class="sz">0.0 GB</div></div>
+            <div class="row"><input type="checkbox" class="ck" data-gb="0.1" onchange="calcDry()"><div class="meta"><div class="pth">~/AppData/Local/NVIDIA</div><div class="tool">NVIDIA 驱动 / AI 库缓存</div></div><span class="tag g">能安全删</span><div class="sz">0.1 GB</div></div>
+          </div>
+        </div>
+
+        <div class="note">每个工具按「对话记录 / 缓存 / 临时文件 / 日志」四类列出，能安全删的打勾即可；「先别删」可排到期后再清，「已锁定」是正在用或受保护的，不会动。清理一律先进回收站，误删可还原。体积为本机实测目录的示意值，真实数据以扫描为准。</div>
+      </section>
+
+      <!-- ===== 重复检测 ===== -->
+      <section class="section" id="dup">
+        <div class="section-head"><h1>重复检测</h1><p>跨工具发现内容相同的文件，用合并方式去重（不删源文件，只让重复项共用同一份）。</p></div>
+        <div class="modules" style="grid-template-columns:repeat(3,1fr)">
+          <div class="module-card g" style="cursor:default"><h3>重复组</h3><div class="mc-sub">内容相同</div><div class="mc-stat"><span class="pill g">9 组</span></div></div>
+          <div class="module-card a" style="cursor:default"><h3>可省空间</h3><div class="mc-sub">去重后回收</div><div class="mc-stat"><span class="pill a">2.1 GB</span></div></div>
+          <div class="module-card" style="cursor:default;border-left-color:var(--accent)"><h3>去重方式</h3><div class="mc-sub">合并去重</div><div class="mc-stat"><span class="pill ghost">零删除</span></div></div>
+        </div>
+        <div class="risk-group g">
+          <div class="rg-head">重复组<span class="cnt">9 组</span></div>
+          <div class="row"><div class="meta"><div class="pth">~/.claude/projects/x.jsonl ≡ ~/.codex/sessions/x.jsonl</div><div class="tool">内容完全相同 · 点「去重」合并</div></div><div class="sz">0.6 GB</div><div class="acts"><button class="btn sm primary">去重</button></div></div>
+          <div class="row"><div class="meta"><div class="pth">~/.gemini/cache/a.bin ≡ ~/.zed/cache/a.bin</div><div class="tool">内容完全相同 · 点「去重」合并</div></div><div class="sz">0.4 GB</div><div class="acts"><button class="btn sm primary">去重</button></div></div>
+          <div class="row"><div class="meta"><div class="pth">~/.antigravity/tmp/b ≡ ~/.claude/tmp/b</div><div class="tool">内容完全相同 · 点「去重」合并</div></div><div class="sz">0.3 GB</div><div class="acts"><button class="btn sm primary">去重</button></div></div>
+        </div>
+        <div class="note">去重不会删任何文件，只是让重复项共用同一份数据，可放心执行。回收站不参与去重。</div>
+      </section>
+
+      <!-- ===== 回收站 ===== -->
+      <section class="section" id="trash">
+        <div class="section-head"><h1>回收站</h1><p>所有清理动作先进回收站，可随时还原。这是防误删的兜底。</p></div>
+        <div class="toolbar">
+          <div class="dryrun">共 <b>12</b> 项 · <b>1.8 GB</b> 可还原</div>
+          <button class="btn primary sm" onclick="alert('全部还原：仅还原有原始记录的项，无记录跳过，绝不删文件')">一键还原全部</button>
+        </div>
+        <div class="risk-group g">
+          <div class="rg-head">已备份项（可还原）<span class="cnt">12 项 · 1.8 GB</span></div>
+          <div class="row"><div class="meta"><div class="pth">~/.claude/projects/old.jsonl</div><div class="tool">清理于 10 分钟前 · 有原始记录</div></div><div class="sz">0.5 GB</div><div class="acts"><button class="btn sm ghost">还原</button></div></div>
+          <div class="row"><div class="meta"><div class="pth">~/.codex/sessions/demo/</div><div class="tool">清理于 1 小时前 · 有原始记录</div></div><div class="sz">0.4 GB</div><div class="acts"><button class="btn sm ghost">还原</button></div></div>
+          <div class="row"><div class="meta"><div class="pth">~/.gemini/cache/tmp1</div><div class="tool">清理于 3 小时前 · 有原始记录</div></div><div class="sz">0.3 GB</div><div class="acts"><button class="btn sm ghost">还原</button></div></div>
+        </div>
+        <div class="note">还原只恢复「有原始路径记录」的项；无记录的项不会被还原，也绝不会因此删除任何东西。</div>
+      </section>
+
+      <!-- ===== 卸载工具 ===== -->
+      <section class="section" id="uninstall">
+        <div class="section-head"><h1>卸载工具</h1><p>列出本机已装、受支持的 AI 工具。卸载一律经系统 / 官方卸载程序，Sweep 不自行删文件。</p></div>
+        <div class="modules" style="grid-template-columns:repeat(2,1fr)">
+          <div class="module-card" style="cursor:default;border-left-color:var(--accent)"><h3>已识别 AI 应用</h3><div class="mc-sub">来自注册表 / 开始菜单卸载项</div><div class="mc-stat"><span class="pill g">5 个</span></div></div>
+          <div class="module-card" style="cursor:default;border-left-color:var(--accent)"><h3>应用本体占用</h3><div class="mc-sub">不含模型 / 数据目录</div><div class="mc-stat"><span class="pill ghost">4.7 GB</span></div></div>
+        </div>
+        <div class="risk-group">
+          <div class="rg-head">应用列表<span class="cnt">卸载均经系统卸载程序</span></div>
+          <div class="row"><div class="meta"><div class="pth">qclaw</div><div class="tool">AI 编码助手</div></div><div class="sz">3.8 GB</div><div class="acts"><button class="btn sm danger">卸载</button></div></div>
+          <div class="row"><div class="meta"><div class="pth">antigravity</div><div class="tool">AI 编码助手</div></div><div class="sz">0.5 GB</div><div class="acts"><button class="btn sm danger">卸载</button></div></div>
+          <div class="row"><div class="meta"><div class="pth">zed</div><div class="tool">编辑器</div></div><div class="sz">0.4 GB</div><div class="acts"><button class="btn sm danger">卸载</button></div></div>
+          <div class="row"><div class="meta"><div class="pth">gemini</div><div class="tool">AI 编码助手（CLI）</div></div><div class="sz">0 GB</div><div class="acts"><button class="btn sm danger">卸载</button></div></div>
+          <div class="row"><div class="meta"><div class="pth">codex</div><div class="tool">AI 编码助手（CLI）</div></div><div class="sz">0 GB</div><div class="acts"><button class="btn sm danger">卸载</button></div></div>
+        </div>
+        <div class="note">卸载不可逆。Sweep 只负责调起官方卸载程序，不会自行递归删除文件；模型 / 数据目录需你在卸载向导中勾选或手动清理。当前会话正在运行的工具，建议先退出再点卸载。</div>
+      </section>
+
+      <!-- ===== 保护列表 ===== -->
+      <section class="section" id="protect">
+        <div class="section-head"><h1>保护列表</h1><p>这里的路径永远不会被清理。列进去的东西，扫到也不会动。</p></div>
+        <div class="toolbar">
+          <input id="protInput" placeholder="输入要保护的路径，如 ./projects/aura/" style="flex:1;background:var(--surface-3);color:var(--text);border:1px solid var(--border);border-radius:var(--r-sm);padding:var(--s3);font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-sm)">
+          <button class="btn primary sm" onclick="addProtect()">添加保护</button>
+        </div>
+        <div class="risk-group r">
+          <div class="rg-head">已锁定路径<span class="cnt">3 条</span></div>
+          <div class="row"><div class="meta"><div class="pth">./.git/</div><div class="tool">当前项目版本库</div></div><div class="acts"><button class="btn sm ghost" onclick="this.closest('.row').remove()">移除</button></div></div>
+          <div class="row"><div class="meta"><div class="pth">~/projects/aura-night-debug/</div><div class="tool">当前调试分支</div></div><div class="acts"><button class="btn sm ghost" onclick="this.closest('.row').remove()">移除</button></div></div>
+          <div class="row"><div class="meta"><div class="pth">D:/game/vita_data/</div><div class="tool">游戏项目数据（非 AI 缓存）</div></div><div class="acts"><button class="btn sm ghost" onclick="this.closest('.row').remove()">移除</button></div></div>
+        </div>
+        <div class="note">改了列表后，下次扫描会重新判断。列表里的路径不会被清理，默认也不勾选。</div>
+      </section>
+
+      <!-- ===== 审计日志 ===== -->
+      <section class="section" id="audit">
+        <div class="section-head"><h1>审计日志</h1><p>每次清理 / 还原 / 卸载都留痕，可追责、可复盘。</p></div>
+        <div class="toolbar">
+          <div class="dryrun">最近 <b>4</b> 条 · 共 <b>12</b> 条</div>
+          <button class="btn ghost sm" onclick="alert('刷新审计日志')">刷新</button>
+        </div>
+        <div class="risk-group">
+          <div class="rg-head">操作记录<span class="cnt">时间倒序</span></div>
+          <div class="row"><div class="meta"><div class="pth">2026-08-12 11:20 · 清理对话（Claude）</div><div class="tool">移动 3 项 / 1.2 GB → 回收站</div></div><div class="sz">clean</div></div>
+          <div class="row"><div class="meta"><div class="pth">2026-08-12 10:05 · 还原（codex 会话）</div><div class="tool">从回收站还原 0.4 GB 到原始路径</div></div><div class="sz">restore</div></div>
+          <div class="row"><div class="meta"><div class="pth">2026-08-11 22:30 · 合并去重</div><div class="tool">合并 9 组重复 / 回收 2.1 GB，未删任何文件</div></div><div class="sz">dedupe</div></div>
+          <div class="row"><div class="meta"><div class="pth">2026-08-11 18:00 · 卸载（qclaw）</div><div class="tool">卸载 3.8 GB，残留配置已备份</div></div><div class="sz">uninstall</div></div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+<script>
+function go(id){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const map={overview:0,conv:1,dup:2,trash:3,uninstall:4,protect:5,audit:6};
+  document.querySelectorAll('.nav-item')[map[id]].classList.add('active');
+  window.scrollTo(0,0);
+}
+function tierClick(tier){
+  // 饼图按安全程度切分；清理界面已统一为「逐个工具清理」，直接进该页
+  if(tier==='green'||tier==='amber'){ go('conv'); }
+  else { go('protect'); }
+}
+function toggleTool(box){
+  const block=box.closest('.tool-block');
+  block.querySelectorAll('.ck').forEach(c=>{c.checked=box.checked;});
+  calcDry();
+}
+function calcDry(){
+  let n=0,g=0;
+  document.querySelectorAll('#conv .ck:checked').forEach(c=>{n++;g+=parseFloat(c.dataset.gb);});
+  document.getElementById('drN').textContent=n;
+  document.getElementById('drG').textContent=g.toFixed(1);
+  document.getElementById('convClean').disabled = n===0;
+}
+function applyRetain(){
+  // 简化示意：保留期变化时可重新计算"先别删"里可清的项，此处仅提示
+  const v=document.getElementById('retain').value;
+  document.getElementById('drG'); // 真实实现会重新扫描并按保留期过滤
+}
+function copyReport(){
+  const txt='【Sweep 占用概览】\n能安全删 4.0 GB（18 项）\n先别删 11.4 GB（6 项）\n已锁定 3.3 GB（2 项）';
+  navigator.clipboard?.writeText(txt);
+  alert('已复制占用概览：\n'+txt);
+}
+function addProtect(){
+  const v=document.getElementById('protInput').value.trim();
+  if(!v) return;
+  const row=document.createElement('div');
+  row.className='row';
+  row.innerHTML='<div class="meta"><div class="pth">'+v+'</div><div class="tool">手动添加</div></div><div class="acts"><button class="btn sm ghost" onclick="this.closest(\'.row\').remove()">移除</button></div>';
+  document.querySelector('#protect .risk-group .rg-head').insertAdjacentElement('afterend', row);
+  document.getElementById('protInput').value='';
+}
+calcDry();
+</script>
+</body>
+</html>

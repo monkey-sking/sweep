@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sweep · 能删·想留·禁动 一眼分清</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#ffffff; --ink:#1a1d21; --muted:#6b7280;
+    --line:#e6e8eb; --brand:#3D7BF0; --brand-ink:#2563eb;
+    --green:#16a34a; --green-bg:#eafaf0; --green-line:#bfe9cd;
+    --amber:#d97706; --amber-bg:#fef6e7; --amber-line:#f5dca0;
+    --red:#dc2626;   --red-bg:#fdecec;   --red-line:#f4c4c4;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5}
+  .app{display:flex;min-height:100vh}
+
+  /* 侧栏 */
+  .side{width:208px;background:#11151a;color:#cdd3da;padding:18px 12px;flex:none}
+  .logo{display:flex;align-items:center;gap:8px;font-weight:700;color:#fff;font-size:16px;margin-bottom:4px}
+  .logo .dot{width:10px;height:10px;border-radius:50%;background:var(--brand)}
+  .tag{font-size:11px;color:#7c8794;margin-bottom:18px}
+  .nav{display:flex;flex-direction:column;gap:2px}
+  .nav a{color:#aeb6bf;text-decoration:none;padding:8px 10px;border-radius:8px;font-size:13px}
+  .nav a.on{background:#1e2630;color:#fff}
+  .nav a:hover{background:#1a2129;color:#fff}
+
+  /* 主区 */
+  .main{flex:1;display:flex;flex-direction:column}
+  .topbar{display:flex;align-items:center;justify-content:space-between;
+    padding:16px 24px;background:var(--panel);border-bottom:1px solid var(--line)}
+  .topbar h1{font-size:18px}
+  .slogan{font-size:12px;color:var(--muted);margin-top:2px}
+  .btn-ghost{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 14px;
+    cursor:pointer;font-size:13px;color:var(--ink)}
+  .btn-ghost:hover{border-color:var(--brand)}
+
+  .content{padding:24px;display:flex;flex-direction:column;gap:20px}
+
+  /* 总览 */
+  .overview{display:flex;gap:14px;flex-wrap:wrap}
+  .ov{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;flex:1;min-width:150px}
+  .ov .k{font-size:12px;color:var(--muted)}
+  .ov .v{font-size:24px;font-weight:700;margin-top:4px}
+  .ov.total .v{color:var(--brand-ink)}
+  .ov.g .v{color:var(--green)} .ov.a .v{color:var(--amber)} .ov.r .v{color:var(--red)}
+
+  /* 三栏 */
+  .cols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+  @media(max-width:980px){.cols{grid-template-columns:1fr}}
+  .col{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .col .head{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);font-weight:600}
+  .col.g .head{background:var(--green-bg)} .col.a .head{background:var(--amber-bg)} .col.r .head{background:var(--red-bg)}
+  .badge{font-size:11px;padding:2px 8px;border-radius:20px;border:1px solid}
+  .col.g .badge{color:var(--green);border-color:var(--green-line);background:#fff}
+  .col.a .badge{color:var(--amber);border-color:var(--amber-line);background:#fff}
+  .col.r .badge{color:var(--red);border-color:var(--red-line);background:#fff}
+  .head .sum{margin-left:auto;font-size:12px;color:var(--muted);font-weight:500}
+
+  .item{display:flex;align-items:flex-start;gap:10px;padding:11px 14px;border-bottom:1px solid #f1f2f4}
+  .item:last-child{border-bottom:0}
+  .item .meta{flex:1;min-width:0}
+  .item .name{font-weight:500}
+  .item .desc{font-size:12px;color:var(--muted);margin-top:2px}
+  .item .sz{font-size:12px;color:var(--muted);white-space:nowrap;margin-left:8px}
+  input[type=checkbox]{width:16px;height:16px;margin-top:2px;accent-color:var(--brand);flex:none}
+  .lock{color:var(--red);font-size:14px;flex:none;margin-top:2px}
+  /* 红区可展开证据链 */
+  details.item{display:block;padding:0;border-bottom:1px solid #f1f2f4;cursor:pointer}
+  details.item:last-child{border-bottom:0}
+  details.item>summary{list-style:none;display:flex;align-items:flex-start;gap:10px;padding:11px 14px}
+  details.item>summary::-webkit-details-marker{display:none}
+  details.item>summary .meta{flex:1;min-width:0}
+  details.item .evi{padding:0 14px 12px 34px;font-size:12px;color:var(--muted);line-height:1.65}
+  details.item .evi b{color:var(--ink);font-weight:600}
+  details.item[open]>summary .name::after{content:" ▲";font-size:10px;color:var(--muted)}
+  details.item:not([open])>summary .name::after{content:" ▼";font-size:10px;color:var(--muted)}
+
+  /* 卸载区 */
+  .uninstall{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .uninstall h3{font-size:14px;margin-bottom:4px}
+  .uninstall .sub{font-size:12px;color:var(--muted);margin-bottom:12px}
+  .utools{display:flex;gap:12px;flex-wrap:wrap}
+  .utool{flex:1;min-width:160px;border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px}
+  .utool .u{font-weight:600}
+  .utool .s{font-size:12px;color:var(--muted)}
+  .utool .btn-x{margin-left:auto;border:1px solid var(--red-line);color:var(--red);background:#fff;
+    border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px}
+  .utool .btn-x:hover{background:var(--red-bg)}
+
+  /* 底部 CTA */
+  .footer{position:sticky;bottom:0;background:var(--panel);border-top:1px solid var(--line);
+    padding:14px 24px;display:flex;align-items:center;gap:14px}
+  .footer .sel{font-size:13px;color:var(--muted)}
+  .footer .sel b{color:var(--green)}
+  .btn-primary{margin-left:auto;background:var(--brand);color:#fff;border:0;border-radius:10px;
+    padding:11px 22px;font-size:14px;font-weight:600;cursor:pointer}
+  .btn-primary:hover{background:var(--brand-ink)}
+  .btn-primary:active{transform:translateY(1px)}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="logo"><span class="dot"></span>Sweep</div>
+    <div class="tag">能删·想留·禁动 一眼分清</div>
+    <nav class="nav">
+      <a href="#" class="on">概览</a>
+      <a href="#">扫描</a>
+      <a href="#">卸载 AI</a>
+      <a href="#">设置</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1>磁盘清理概览</h1>
+        <div class="slogan">上次扫描：今天 17:20 · 本机 C 盘</div>
+      </div>
+      <button class="btn-ghost">重新扫描</button>
+    </div>
+
+    <div class="content">
+      <!-- 总览 -->
+      <div class="overview">
+        <div class="ov total"><div class="k">本次可优化</div><div class="v">47.3 GB</div></div>
+        <div class="ov g"><div class="k">🟢 可清理（默认勾选）</div><div class="v">39.1 GB</div></div>
+        <div class="ov a"><div class="k">🟡 建议保留</div><div class="v">6.2 GB</div></div>
+        <div class="ov r"><div class="k">🔒 已保护（不碰）</div><div class="v">2.0 GB</div></div>
+      </div>
+
+      <!-- 三栏 -->
+      <div class="cols">
+        <!-- 绿 -->
+        <div class="col g">
+          <div class="head">🟢 可清理 <span class="badge">安全删</span><span class="sum">39.1 GB</span></div>
+          <label class="item"><input type="checkbox" class="pick" checked data-sz="9.8"><div class="meta"><div class="name">HuggingFace 未加载模型</div><div class="desc">纯缓存，可重新下载</div></div><span class="sz">9.8 GB</span></label>
+          <label class="item"><input type="checkbox" class="pick" checked data-sz="7.4"><div class="meta"><div class="name">npm / pip 缓存</div><div class="desc">包管理缓存，无状态损失</div></div><span class="sz">7.4 GB</span></label>
+          <label class="item"><input type="checkbox" class="pick" checked data-sz="5.2"><div class="meta"><div class="name">Cursor / Claude 索引与会话</div><div class="desc">索引可重建，会话历史</div></div><span class="sz">5.2 GB</span></label>
+          <label class="item"><input type="checkbox" class="pick" checked data-sz="11.0"><div class="meta"><div class="name">重复模型合并（硬链接）</div><div class="desc">Llama-3 存了 4 份，合并为 1 份</div></div><span class="sz">11.0 GB</span></label>
+          <label class="item"><input type="checkbox" class="pick" checked data-sz="5.7"><div class="meta"><div class="name">Docker 悬空镜像</div><div class="desc">无容器引用的中间层</div></div><span class="sz">5.7 GB</span></label>
+        </div>
+
+        <!-- 琥珀 -->
+        <div class="col a">
+          <div class="head">🟡 建议保留 <span class="badge">你决定</span><span class="sum">6.2 GB</span></div>
+          <label class="item"><input type="checkbox" class="pick" data-sz="3.8"><div class="meta"><div class="name">llama3-8b（上周用过）</div><div class="desc">主动装的模型，删了需重新下</div></div><span class="sz">3.8 GB</span></label>
+          <label class="item"><input type="checkbox" class="pick" data-sz="2.4"><div class="meta"><div class="name">LM Studio 手动模型</div><div class="desc">你自行管理，路径非标准</div></div><span class="sz">2.4 GB</span></label>
+        </div>
+
+        <!-- 红 -->
+        <div class="col r">
+          <div class="head">🔒 不能清理 <span class="badge">已锁定</span><span class="sum">2.0 GB</span></div>
+          <details class="item" open>
+            <summary><span class="lock">🔒</span><div class="meta"><div class="name">deepseek-r1-70b</div><div class="desc">正在运行，已锁定不可清理</div></div><span class="sz">1.3 GB</span></summary>
+            <div class="evi"><b>判定证据：</b>ollama ps 检测到进程 <b>PID 4821</b> 正通过 mmap 占用该模型权重 ~1.3 GB。强制删除会导致进程崩溃并可能损坏模型。<br><b>解除条件：</b>在 Ollama 中停止该模型后，此项将自动转入「可清理」。</div>
+          </details>
+          <details class="item">
+            <summary><span class="lock">🔒</span><div class="meta"><div class="name">项目 .venv</div><div class="desc">活跃项目依赖，已锁定</div></div><span class="sz">0.5 GB</span></summary>
+            <div class="evi"><b>判定证据：</b>目录内含 <b>pyproject.toml</b>，向上 3 层发现 <b>.git</b>（最近提交 2 天前），且命中 IDE 最近工程列表。判定为现有活跃 Python 项目虚拟环境。<br><b>解除条件：</b>关闭项目或移出后，可手动标记为清理（默认仍建议保留）。</div>
+          </details>
+          <details class="item">
+            <summary><span class="lock">🔒</span><div class="meta"><div class="name">活跃会话数据库</div><div class="desc">含对话与凭证，受保护</div></div><span class="sz">0.2 GB</span></summary>
+            <div class="evi"><b>判定证据：</b>目录内含 <b>chat.db</b> 与 <b>token.json</b>，被识别为含用户对话历史与登录凭证的受保护数据。<br><b>解除条件：</b>属应用数据，需在该应用内主动退出/清除，Sweep 不代为删除。</div>
+          </details>
+        </div>
+      </div>
+
+      <!-- 卸载 AI -->
+      <div class="uninstall">
+        <h3>卸载 AI 工具</h3>
+        <div class="sub">移除应用及其全部缓存、模型（模型可重新下载）。高危操作，需二次确认。</div>
+        <div class="utools">
+          <div class="utool"><div><div class="u">Ollama</div><div class="s">21.3 GB</div></div><button class="btn-x">卸载</button></div>
+          <div class="utool"><div><div class="u">LM Studio</div><div class="s">14.6 GB</div></div><button class="btn-x">卸载</button></div>
+          <div class="utool"><div><div class="u">Cursor</div><div class="s">2.1 GB</div></div><button class="btn-x">卸载</button></div>
+          <div class="utool"><div><div class="u">Claude Desktop</div><div class="s">1.4 GB</div></div><button class="btn-x">卸载</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 清理完成回执 -->
+    <div class="content" id="report" style="display:none;flex-direction:column;gap:20px">
+      <div style="text-align:center;padding:12px 0">
+        <div style="font-size:22px;font-weight:700;color:var(--green)">✓ 清理完成</div>
+        <div style="color:var(--muted);margin-top:4px">本次操作已结束，重要数据均已保护</div>
+      </div>
+      <div class="overview">
+        <div class="ov g"><div class="k">已释放空间</div><div class="v" id="rReleased">39.1 GB</div></div>
+        <div class="ov r"><div class="k">🔒 已保护（未动）</div><div class="v">2.0 GB</div></div>
+        <div class="ov a"><div class="k">🟡 建议保留（未动）</div><div class="v">6.2 GB</div></div>
+      </div>
+      <div class="uninstall">
+        <h3>本次清理项</h3>
+        <div id="rList"></div>
+      </div>
+      <div style="text-align:center">
+        <button class="btn-primary" style="margin:0" onclick="backOverview()">返回概览</button>
+      </div>
+    </div>
+
+    <!-- 单一 CTA -->
+    <div class="footer">
+      <div class="sel">已选可清理：<b id="selSize">39.1 GB</b> · 建议保留与受保护项不会动</div>
+      <button class="btn-primary" onclick="showReport()">一键清理可清理项</button>
+    </div>
+  </main>
+</div>
+
+<script>
+  const picks=document.querySelectorAll('.pick');
+  const sel=document.getElementById('selSize');
+  function fmt(gb){return gb.toFixed(1)+' GB';}
+  function update(){
+    let t=0;picks.forEach(p=>{if(p.checked)t+=parseFloat(p.dataset.sz);});
+    sel.textContent=fmt(t);
+  }
+  picks.forEach(p=>p.addEventListener('change',update));
+
+  function showReport(){
+    const t=parseFloat(sel.textContent);
+    let rows='';
+    picks.forEach(p=>{ if(p.checked){
+      const item=p.closest('.item');
+      const n=item.querySelector('.name').textContent;
+      rows+='<div class="evi" style="padding-left:0">✔ '+n+' · '+parseFloat(p.dataset.sz).toFixed(1)+' GB</div>';
+    }});
+    document.getElementById('rReleased').textContent=t.toFixed(1)+' GB';
+    document.getElementById('rList').innerHTML=rows||'<div class="evi" style="padding-left:0">无可清理项</div>';
+    document.getElementById('content').style.display='none';
+    document.getElementById('report').style.display='flex';
+    document.getElementById('footer').style.display='none';
+  }
+  function backOverview(){
+    document.getElementById('report').style.display='none';
+    document.getElementById('content').style.display='flex';
+    document.getElementById('footer').style.display='flex';
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+# ---- 编译缓存 ----
+__pycache__/
+*.pyc
+
+# ---- WorkBuddy 内部数据（含记忆/日志，非项目源码）----
+.workbuddy/
+
+# ---- 日志与运行产物 ----
+*.log
+.sweep_*.log
+.sweep_server.log
+.sweep_check.js
+
+# ---- 本机扫描结果（含真实路径，运行 server.py 后重新生成）----
+scan.json
+srv_scan*.json
+
+# ---- SSE 流量抓取产物（可能含对话内容）----
+sse*.txt

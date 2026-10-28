@@ -1,0 +1,10 @@
+[
+  {"id": "cursor", "name": "Cursor", "sub": "AI 代码编辑器 · 安装版", "brand": "#2aa3a3", "keys": ["Cursor"], "model_dirs": ["%USERPROFILE%\\.cursor"], "category": "ide"},
+  {"id": "qclaw", "name": "QClaw", "sub": "AI 助手 · 安装版", "brand": "#5b8def", "keys": ["QClaw", "问爪"], "model_dirs": [], "category": "agent"},
+  {"id": "antigravity", "name": "Antigravity", "sub": "AI 编程环境 · 安装版", "brand": "#e0853b", "keys": ["Antigravity"], "model_dirs": [], "category": "agent"},
+  {"id": "zed", "name": "Zed", "sub": "高性能代码编辑器 · 安装版", "brand": "#3a7afe", "keys": ["Zed"], "model_dirs": ["%USERPROFILE%\\.zed"], "category": "ide"},
+  {"id": "claude", "name": "Claude", "sub": "AI 助手 · 安装版", "brand": "#d97757", "keys": ["Claude"], "model_dirs": ["%USERPROFILE%\\.claude"], "category": "agent"},
+  {"id": "coze", "name": "Coze", "sub": "AI 智能体平台 · 安装版", "brand": "#7a5af0", "keys": ["Coze"], "model_dirs": [], "category": "agent"},
+  {"id": "gemini", "name": "Gemini", "sub": "Google AI 助手 · CLI", "brand": "#4285f4", "keys": ["Gemini CLI", "Gemini"], "model_dirs": ["%USERPROFILE%\\.gemini"], "cli_check": ["gemini"], "category": "cli"},
+  {"id": "codex", "name": "Codex CLI", "sub": "命令行编程助手 · CLI", "brand": "#7a5af0", "keys": ["Codex"], "model_dirs": ["%USERPROFILE%\\.codex"], "cli_check": ["codex"], "category": "cli"}
+]

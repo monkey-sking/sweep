@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sweep · 统一设计原型</title>
+<style>
+:root{
+  /* ---- 表面 ---- */
+  --bg:#0d1117; --surface:#161b22; --surface-2:#1b2230; --surface-3:#222b3a;
+  --border:#2a3340; --border-strong:#3a4757;
+  /* ---- 文字 ---- */
+  --text:#e6edf3; --text-2:#9aa7b4; --text-3:#6b7682;
+  /* ---- 品牌色（单一强调，绿=安全可清理，也是产品色）---- */
+  --accent:#3fb950; --accent-2:#2f9b40; --accent-weak:rgba(63,185,80,.14); --accent-line:rgba(63,185,80,.42);
+  /* ---- 风险三档语义色 ---- */
+  --green:#3fb950; --green-bg:rgba(63,185,80,.12);
+  --amber:#d29922; --amber-bg:rgba(210,153,34,.12);
+  --red:#f85149;  --red-bg:rgba(248,81,73,.12);
+  /* ---- 圆角（一套）---- */
+  --r-sm:8px; --r:10px; --r-lg:14px; --r-xl:18px; --r-pill:999px;
+  /* ---- 间距（一套，4 的倍数）---- */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px; --s7:32px;
+  /* ---- 字号（一套）---- */
+  --fs-xs:11px; --fs-sm:12px; --fs-md:13px; --fs-base:14px; --fs-lg:16px; --fs-xl:20px; --fs-2xl:28px; --fs-3xl:34px;
+  /* ---- 阴影 / 字体 ---- */
+  --sh:0 8px 24px -8px rgba(0,0,0,.55); --sh-sm:0 4px 14px -6px rgba(0,0,0,.45);
+  --font:-apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font);background:
+  radial-gradient(1100px 520px at 78% -8%,rgba(63,185,80,.05),transparent 60%),var(--bg);
+  color:var(--text);font-size:var(--fs-base);line-height:1.5;-webkit-font-smoothing:antialiased}
+button{font-family:inherit}
+
+/* ============ 布局骨架 ============ */
+.app{display:grid;grid-template-columns:236px 1fr;min-height:100vh}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:var(--s5) var(--s4);
+  display:flex;flex-direction:column;gap:var(--s6);position:sticky;top:0;height:100vh}
+.brand{display:flex;align-items:center;gap:var(--s3);font-weight:700;font-size:var(--fs-lg)}
+.brand .logo{width:30px;height:30px;border-radius:var(--r);background:linear-gradient(180deg,var(--accent),var(--accent-2));
+  display:flex;align-items:center;justify-content:center;color:#06210d;font-weight:800;box-shadow:var(--sh-sm)}
+.brand small{display:block;font-size:var(--fs-xs);color:var(--text-3);font-weight:500}
+.nav{display:flex;flex-direction:column;gap:var(--s2)}
+.nav-item{display:flex;align-items:center;gap:var(--s3);width:100%;text-align:left;border:1px solid transparent;
+  background:transparent;border-radius:var(--r);padding:var(--s3);font-size:var(--fs-md);color:var(--text-2);
+  cursor:pointer;transition:.16s}
+.nav-item:hover{background:var(--surface-2);color:var(--text)}
+.nav-item .ni{width:18px;height:18px;flex:none;display:flex;align-items:center;justify-content:center;color:currentColor}
+.nav-item.active{background:linear-gradient(180deg,rgba(63,185,80,.18),rgba(63,185,80,.07));
+  color:var(--accent);font-weight:600;border-color:var(--accent-line);box-shadow:inset 0 0 0 1px var(--accent-line)}
+.side-foot{margin-top:auto;display:flex;flex-direction:column;gap:var(--s2);font-size:var(--fs-xs);color:var(--text-3);line-height:1.6}
+.side-foot .stat-dot{width:7px;height:7px;border-radius:var(--r-pill);background:var(--accent);box-shadow:0 0 8px var(--accent);display:inline-block;margin-right:6px}
+
+.main{display:flex;flex-direction:column;min-width:0}
+.topbar{background:rgba(22,27,34,.82);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);
+  padding:var(--s4) var(--s6);position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:var(--s4)}
+.topbar h1{font-size:var(--fs-xl);margin:0;font-weight:700}
+.topbar .sub{font-size:var(--fs-sm);color:var(--text-2);margin-top:2px}
+.topbar .spacer{margin-left:auto;display:flex;align-items:center;gap:var(--s3)}
+.content{padding:var(--s6);max-width:1180px;width:100%;margin:0 auto}
+.section{display:none}
+.section.active{display:block;animation:fade .18s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* ============ 统一组件 ============ */
+.section-head{display:flex;align-items:flex-end;gap:var(--s4);margin-bottom:var(--s5)}
+.section-head .t{font-size:var(--fs-2xl);font-weight:700;letter-spacing:-.2px}
+.section-head .d{font-size:var(--fs-sm);color:var(--text-2);margin-top:4px}
+.section-head .acts{margin-left:auto;display:flex;gap:var(--s3);align-items:center}
+
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:var(--s4);margin-bottom:var(--s5)}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--s4);box-shadow:var(--sh-sm)}
+.stat .label{font-size:var(--fs-sm);color:var(--text-2)}
+.stat .value{font-size:var(--fs-3xl);font-weight:700;margin-top:6px;letter-spacing:-.5px}
+.stat .hint{font-size:var(--fs-xs);color:var(--text-3);margin-top:2px}
+.stat.accent .value{color:var(--accent)}
+.stat.green .value{color:var(--green)} .stat.amber .value{color:var(--amber)} .stat.red .value{color:var(--red)}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--s4);box-shadow:var(--sh-sm);margin-bottom:var(--s4)}
+.card-head{display:flex;align-items:center;gap:var(--s3);margin-bottom:var(--s3)}
+.card-head .ct{font-weight:600;font-size:var(--fs-lg)}
+.card-head .cm{margin-left:auto;font-size:var(--fs-sm);color:var(--text-2)}
+.card-head .cm b{color:var(--text)}
+
+.btn{display:inline-flex;align-items:center;gap:var(--s2);background:var(--surface-2);border:1px solid var(--border-strong);
+  color:var(--text);border-radius:var(--r);padding:9px 15px;font-size:var(--fs-md);font-weight:500;cursor:pointer;transition:.15s}
+.btn:hover{border-color:var(--accent-line)}
+.btn.primary{background:linear-gradient(180deg,var(--accent),var(--accent-2));color:#06210d;border:0;font-weight:600;box-shadow:0 4px 14px rgba(63,185,80,.28)}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.danger{background:var(--red-bg);border-color:rgba(248,81,73,.45);color:var(--red);font-weight:600}
+.btn.danger:hover{border-color:var(--red)}
+.btn.ghost{background:transparent}
+.btn.sm{padding:6px 11px;font-size:var(--fs-sm)}
+.btn[disabled]{opacity:.4;cursor:not-allowed}
+
+.row{display:flex;align-items:center;gap:var(--s3);padding:var(--s3) 0;border-bottom:1px solid var(--border)}
+.row:last-child{border-bottom:0}
+.row .meta{flex:1;min-width:0}
+.row .name{font-weight:500}
+.row .desc{font-size:var(--fs-sm);color:var(--text-2);margin-top:2px}
+.row .sz{font-size:var(--fs-sm);color:var(--text-2);white-space:nowrap;margin-left:var(--s3)}
+.row .mono{font-family:var(--mono);font-size:var(--fs-xs);color:var(--text-3);word-break:break-all}
+
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-xs);font-weight:600;padding:3px 9px;border-radius:var(--r-pill)}
+.pill.g{background:var(--green-bg);color:var(--green)} .pill.a{background:var(--amber-bg);color:var(--amber)} .pill.r{background:var(--red-bg);color:var(--red)}
+.pill .dot{width:6px;height:6px;border-radius:var(--r-pill);background:currentColor}
+.tag{font-size:var(--fs-xs);color:var(--text-2);background:var(--surface-2);border:1px solid var(--border);padding:2px 8px;border-radius:var(--r-pill)}
+
+/* viz */
+.viz-tabs{display:inline-flex;gap:var(--s2);background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-pill);padding:3px}
+.viz-tab{background:transparent;border:0;color:var(--text-2);border-radius:var(--r-pill);padding:6px 14px;font-size:var(--fs-sm);cursor:pointer;font-weight:500}
+.viz-tab.active{background:var(--accent-weak);color:var(--accent)}
+.viz-stage{margin-top:var(--s4);background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:var(--s3);min-height:330px;display:flex;align-items:center;justify-content:center}
+.viz-legend{display:flex;gap:var(--s5);margin-top:var(--s3);font-size:var(--fs-sm);color:var(--text-2)}
+.viz-legend .sw{width:11px;height:11px;border-radius:3px;display:inline-block;margin-right:6px;vertical-align:-1px}
+
+/* misc */
+.toolbar{display:flex;align-items:center;gap:var(--s3);background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--s3) var(--s4);margin-bottom:var(--s4);flex-wrap:wrap}
+.toolbar .spacer{margin-left:auto}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:var(--fs-sm);color:var(--text-2)}
+.field input{width:96px;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:var(--r-sm);padding:7px 9px;font-size:var(--fs-md)}
+.progress{height:8px;background:var(--surface-2);border-radius:var(--r-pill);overflow:hidden;margin:var(--s3) 0}
+.progress > i{display:block;height:100%;width:42%;background:var(--accent);border-radius:var(--r-pill)}
+.empty{font-size:var(--fs-sm);color:var(--text-2);padding:var(--s6);text-align:center;border:1px dashed var(--border);border-radius:var(--r-lg)}
+.note{font-size:var(--fs-sm);color:var(--text-3);margin-top:var(--s4);line-height:1.7}
+.divider{height:1px;background:var(--border);margin:var(--s5) 0}
+
+/* ============ 设计系统展示（原型末尾）============ */
+.tokens{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--s3);margin-top:var(--s3)}
+.tok{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:var(--s3)}
+.tok .sw{height:34px;border-radius:var(--r-sm);margin-bottom:var(--s2);border:1px solid var(--border)}
+.tok .k{font-size:var(--fs-xs);color:var(--text-3);font-family:var(--mono)}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- 侧栏 -->
+  <aside class="sidebar">
+    <div class="brand"><span class="logo">S</span><div>SWEEP<small>AI 磁盘资产管理</small></div></div>
+    <nav class="nav">
+      <button class="nav-item active" onclick="go('scan')"><span class="ni">▣</span>扫描概览</button>
+      <button class="nav-item" onclick="go('conv')"><span class="ni">💬</span>对话清理</button>
+      <button class="nav-item" onclick="go('dup')"><span class="ni">🔗</span>重复检测</button>
+      <button class="nav-item" onclick="go('trash')"><span class="ni">🗑️</span>回收站</button>
+      <button class="nav-item" onclick="go('uninstall')"><span class="ni">⚙️</span>卸载工具</button>
+    </nav>
+    <div class="side-foot">
+      <div><span class="stat-dot"></span>服务运行中 · 端口 8765</div>
+      <div>备份位于 %USERPROFILE%\.sweep_backup\</div>
+    </div>
+  </aside>
+
+  <!-- 主区 -->
+  <div class="main">
+    <div class="topbar">
+      <div><h1 id="pt">扫描概览</h1><div class="sub" id="ps">本机 AI 资产总览与清理入口</div></div>
+      <div class="spacer"><span class="tag">本地服务 · 真实读写</span></div>
+    </div>
+    <div class="content">
+
+      <!-- ① 扫描概览 -->
+      <section class="section active" id="scan">
+        <div class="section-head"><div><div class="t">磁盘资产总览</div><div class="d">扫描 55 个 AI 相关目录，按风险分三档呈现</div></div>
+          <div class="acts"><button class="btn primary" onclick="alert('清空绿档→备份目录')">清理选中</button><button class="btn ghost sm" onclick="alert('复制战报')">复制战报</button></div></div>
+        <div class="stat-grid">
+          <div class="stat"><div class="label">总占用</div><div class="value">18.7<span style="font-size:var(--fs-lg)"> GB</span></div><div class="hint">55 个目录</div></div>
+          <div class="stat green"><div class="label">🟢 可清理</div><div class="value">4.0<span style="font-size:var(--fs-lg)"> GB</span></div><div class="hint">7 项 · 删后可重建</div></div>
+          <div class="stat amber"><div class="label">🟡 建议保留</div><div class="value">11.4<span style="font-size:var(--fs-lg)"> GB</span></div><div class="hint">38 项 · 含模型/配置</div></div>
+          <div class="stat red"><div class="label">🔒 不能清理</div><div class="value">3.3<span style="font-size:var(--fs-lg)"> GB</span></div><div class="hint">6 项 · 进程占用</div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><div class="ct">资产分布</div>
+            <div class="viz-tabs"><button class="viz-tab active" onclick="vt(this)">矩形树图</button><button class="viz-tab" onclick="vt(this)">占比环图</button></div></div>
+          <div class="viz-stage">
+            <svg width="640" height="320" viewBox="0 0 640 320" xmlns="http://www.w3.org/2000/svg">
+              <rect x="0" y="0" width="360" height="200" fill="#3fb950" opacity=".9"/><rect x="364" y="0" width="276" height="120" fill="#d29922" opacity=".9"/>
+              <rect x="364" y="124" width="276" height="76" fill="#d29922" opacity=".7"/><rect x="0" y="204" width="200" height="116" fill="#3fb950" opacity=".6"/>
+              <rect x="204" y="204" width="240" height="116" fill="#f85149" opacity=".85"/><rect x="448" y="204" width="192" height="116" fill="#3fb950" opacity=".4"/>
+            </svg>
+          </div>
+          <div class="viz-legend"><span><span class="sw" style="background:#3fb950"></span>可清理 4 GB</span><span><span class="sw" style="background:#d29922"></span>建议保留 11.4 GB</span><span><span class="sw" style="background:#f85149"></span>不能清理 3.3 GB</span></div>
+        </div>
+
+        <div class="note">绿档勾选后移动到备份目录（非永久删除，可回收站还原）；红档始终跳过。🗣️ 各 AI 应用大体积或陈旧的对话历史会被单独标记为「可清理」，仅丢失聊天记录。</div>
+      </section>
+
+      <!-- ② 对话清理 -->
+      <section class="section" id="conv">
+        <div class="section-head"><div><div class="t">对话清理</div><div class="d">按年龄 / 大小标记可清理的聊天历史，仅进回收站</div></div></div>
+        <div class="card">
+          <div class="card-head"><div class="ct">清理阈值</div></div>
+          <div class="toolbar">
+            <div class="field"><label>超过几天没动过</label><input value="90"><span class="tag">天</span></div>
+            <div class="field"><label>大于多少 MB</label><input value="50"><span class="tag">MB</span></div>
+            <button class="btn primary">应用并扫描</button>
+            <div class="spacer tag">满足任一条即标绿 · 可还原 · 可排序</div>
+          </div>
+        </div>
+        <div class="stat-grid">
+          <div class="stat green"><div class="label">可清理（命中）</div><div class="value">0</div></div>
+          <div class="stat red"><div class="label">运行中锁定</div><div class="value">0</div></div>
+          <div class="stat accent"><div class="label">可清理总量</div><div class="value">0<span style="font-size:var(--fs-lg)"> GB</span></div></div>
+        </div>
+        <div class="toolbar"><span class="tag">排序</span><button class="btn sm">按大小</button><button class="btn sm">按新旧</button><div class="spacer"></div><span class="tag">共 1990 条对话</span></div>
+        <div class="card"><div class="empty">应用阈值后，这里按「可清理 / 运行中锁定 / 保留」三色列出对话，可勾选手动清理。</div></div>
+      </section>
+
+      <!-- ③ 重复检测 -->
+      <section class="section" id="dup">
+        <div class="section-head"><div><div class="t">跨工具重复检测</div><div class="d">按内容哈希比对，合并为硬链接释放空间</div></div>
+          <div class="acts"><button class="btn" onclick="alert('计算哈希')">检测重复</button><button class="btn primary" onclick="alert('合并为硬链接')">一键合并去重</button></div></div>
+        <div class="stat-grid">
+          <div class="stat"><div class="label">重复组数</div><div class="value">0</div></div>
+          <div class="stat accent"><div class="label">可节省空间</div><div class="value">0<span style="font-size:var(--fs-lg)"> GB</span></div></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="ct">检测结果</div></div>
+          <div class="progress"><i></i></div>
+          <div class="empty">未检测到跨工具重复文件。本机未装本地模型运行时（Ollama / LM Studio / ComfyUI 等）时属正常——多个工具各自缓存同一模型时，这里会标出可合并项。</div>
+        </div>
+      </section>
+
+      <!-- ④ 回收站 -->
+      <section class="section" id="trash">
+        <div class="section-head"><div><div class="t">回收站</div><div class="d">已移动的备份，可一键还原</div></div>
+          <div class="acts"><button class="btn" onclick="alert('刷新')">刷新</button><button class="btn primary" onclick="alert('全部还原')">全部还原</button></div></div>
+        <div class="stat-grid">
+          <div class="stat"><div class="label">已备份项数</div><div class="value">12</div></div>
+          <div class="stat accent"><div class="label">可还原总量</div><div class="value">1.8<span style="font-size:var(--fs-lg)"> GB</span></div></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="ct">备份列表</div><div class="cm"><b>5</b> 个批次</div></div>
+          <div class="row"><div class="meta"><div class="name">QClaw 缓存</div><div class="desc mono">C:\Users\...\AppData\Roaming\QClaw\Cache</div></div><div class="sz">0.9 GB</div><button class="btn sm">还原</button></div>
+          <div class="row"><div class="meta"><div class="name">Claude 会话</div><div class="desc mono">C:\Users\...\AppData\Roaming\Claude\sessions</div></div><div class="sz">0.6 GB</div><button class="btn sm">还原</button></div>
+          <div class="row"><div class="meta"><div class="name">pip 缓存</div><div class="desc mono">C:\Users\...\AppData\Local\pip\Cache</div></div><div class="sz">0.3 GB</div><button class="btn sm">还原</button></div>
+        </div>
+        <div class="divider"></div>
+        <div class="card-head"><div class="ct">操作日志</div></div>
+        <div class="row"><div class="meta"><div class="name">移动 7 项到备份</div><div class="desc">2026-08-12 10:02</div></div><span class="pill g"><span class="dot"></span>clean</span></div>
+      </section>
+
+      <!-- ⑤ 卸载工具 -->
+      <section class="section" id="uninstall">
+        <div class="section-head"><div><div class="t">卸载工具</div><div class="d">走系统卸载入口 · 二次确认 · 模型目录默认不勾</div></div></div>
+        <div class="stat-grid">
+          <div class="stat"><div class="label">已识别 AI 应用</div><div class="value">5</div></div>
+          <div class="stat accent"><div class="label">应用本体占用</div><div class="value">4.7<span style="font-size:var(--fs-lg)"> GB</span></div></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="ct">已安装的 AI 工具</div><div class="cm">清单由 <b>ai_tools.json</b> 驱动</div></div>
+          <div class="row"><div class="meta"><div class="name">QClaw <span class="tag">v0.2.35</span></div><div class="desc">AI 助手 · 安装版</div></div><div class="sz">3.8 GB</div><button class="btn danger sm">卸载</button></div>
+          <div class="row"><div class="meta"><div class="name">Antigravity</div><div class="desc">AI 编程环境 · 安装版</div></div><div class="sz">0.5 GB</div><button class="btn danger sm">卸载</button></div>
+          <div class="row"><div class="meta"><div class="name">Zed</div><div class="desc">高性能代码编辑器 · 安装版</div></div><div class="sz">0.4 GB</div><button class="btn danger sm">卸载</button></div>
+          <div class="row"><div class="meta"><div class="name">Gemini CLI</div><div class="desc">Google AI 助手 · CLI</div></div><div class="sz">—</div><button class="btn danger sm">卸载</button></div>
+          <div class="row"><div class="meta"><div class="name">Codex CLI</div><div class="desc">命令行编程助手 · CLI</div></div><div class="sz">—</div><button class="btn danger sm">卸载</button></div>
+        </div>
+      </section>
+
+      <!-- 设计系统 -->
+      <section class="section" id="sys">
+        <div class="section-head"><div><div class="t">设计系统</div><div class="d">本次统一重构所依据的令牌与组件基准</div></div></div>
+        <div class="card"><div class="card-head"><div class="ct">语义色</div></div><div class="tokens">
+          <div class="tok"><div class="sw" style="background:#3fb950"></div><div class="k">--accent / --green</div></div>
+          <div class="tok"><div class="sw" style="background:#d29922"></div><div class="k">--amber</div></div>
+          <div class="tok"><div class="sw" style="background:#f85149"></div><div class="k">--red</div></div>
+          <div class="tok"><div class="sw" style="background:#161b22"></div><div class="k">--surface</div></div>
+          <div class="tok"><div class="sw" style="background:#2a3340"></div><div class="k">--border</div></div>
+        </div></div>
+        <div class="card"><div class="card-head"><div class="ct">圆角 / 间距 / 字号</div></div><div class="tokens">
+          <div class="tok"><div class="sw" style="background:var(--surface-3);border-radius:var(--r-sm)"></div><div class="k">--r-sm 8</div></div>
+          <div class="tok"><div class="sw" style="background:var(--surface-3);border-radius:var(--r)"></div><div class="k">--r 10</div></div>
+          <div class="tok"><div class="sw" style="background:var(--surface-3);border-radius:var(--r-lg)"></div><div class="k">--r-lg 14</div></div>
+          <div class="tok"><div class="sw" style="background:var(--surface-3);border-radius:var(--r-xl)"></div><div class="k">--r-xl 18</div></div>
+        </div><div class="note">间距统一 4 的倍数（--s1…--s7）；字号 11/12/13/14/16/20/28/34。所有页面只复用 .stat / .card / .btn / .row / .pill 五类组件，不再出现第二套写法。</div></div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const META={scan:["扫描概览","本机 AI 资产总览与清理入口"],conv:["对话清理","按年龄 / 大小标记可清理的聊天历史"],
+  dup:["跨工具重复检测","按内容哈希比对，合并为硬链接释放空间"],trash:["回收站","已移动的备份，可一键还原"],
+  uninstall:["卸载工具","走系统卸载入口 · 二次确认"],sys:["设计系统","统一令牌与组件基准"]};
+function go(id){document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.getElementById('pt').textContent=META[id][0];
+  document.getElementById('ps').textContent=META[id][1];}
+function vt(btn){btn.parentElement.querySelectorAll('.viz-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}
+</script>
+</body>
+</html>
