@@ -1,7 +1,7 @@
 # Sweep
 
 <!-- badges:start -->
-[![Stars](https://img.shields.io/github/stars/monkey-sking/sweep?style=flat-square)](https://github.com/monkey-sking/sweep/stargazers) [![Forks](https://img.shields.io/github/forks/monkey-sking/sweep?style=flat-square)](https://github.com/monkey-sking/sweep/network/members) [![Last commit](https://img.shields.io/github/last-commit/monkey-sking/sweep?style=flat-square)](https://github.com/monkey-sking/sweep/commits/master)
+[![Stars](https://img.shields.io/github/stars/monkey-sking/sweep?style=flat-square)](https://github.com/monkey-sking/sweep/stargazers) [![Forks](https://img.shields.io/github/forks/monkey-sking/sweep?style=flat-square)](https://github.com/monkey-sking/sweep/network/members) [![Last commit](https://img.shields.io/github/last-commit/monkey-sking/sweep?style=flat-square)](https://github.com/monkey-sking/sweep/commits/master) [![Language](https://img.shields.io/github/languages/top/monkey-sking/sweep?style=flat-square)](https://github.com/monkey-sking/sweep/search?l=)
 <!-- badges:end -->
 
 AI 开发者磁盘缓存与本地数据盘点工具：扫描 AI 工具目录、汇总磁盘占用，并提供独立的会话清理工具。当前代码来自可运行原型，适合继续开发；不会自动删除文件。
